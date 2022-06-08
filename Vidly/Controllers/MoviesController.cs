@@ -5,6 +5,7 @@ using System.Data.Entity;
 using System.Web.Mvc;
 using Vidly.Models;
 using Vidly.ViewModel;
+using System.Data.Entity.Validation;
 
 namespace Vidly.Controllers
 {
@@ -22,6 +23,17 @@ namespace Vidly.Controllers
             _context.Dispose();
         }
 
+        public ActionResult New()
+        {
+            var genreTypes = _context.Genres.ToList();
+            var viwModel = new MovieFormViewModel
+            {
+                Genres = genreTypes
+            };
+
+            return View("MovieForm", viwModel);
+        }
+
         public ViewResult Index()
         {
             var movies = _context.Movies.Include(m => m.Genre).ToList();
@@ -37,6 +49,63 @@ namespace Vidly.Controllers
 
             return View(movie);
         }
+
+        public ActionResult Edit(int id)
+        {
+            var movie = _context.Movies.SingleOrDefault(c => c.Id == id);
+
+            if (movie == null)
+                HttpNotFound();
+
+            var viewModel = new MovieFormViewModel
+            {
+                Movie = movie,
+                Genres = _context.Genres.ToList()
+            };
+
+            return View("MovieForm", viewModel);
+        }
+
+        [HttpPost]
+        public ActionResult Save(Movie movie)
+        {
+            if (movie.Id == 0)
+            {
+                var Movie = new Movie
+                {
+                    Name = movie.Name,
+                    ReleaseDate = movie.ReleaseDate,
+                    GenreId = movie.GenreId,
+                    NumberInStock = movie.NumberInStock
+                };
+
+                _context.Movies.Add(Movie);
+            }
+            else
+            {
+                var movieInDb = _context.Movies.Single(c => c.Id == movie.Id);
+
+                movieInDb.Name = movie.Name;
+                movieInDb.ReleaseDate = movie.ReleaseDate;
+                movieInDb.GenreId = movie.GenreId;
+                movieInDb.NumberInStock = movie.NumberInStock;
+
+                // Another way to update properties using AutoMapper
+                //Mapper.Map(customer, customerInDb);
+
+            }
+            try
+            {
+                _context.SaveChanges();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+
+            return RedirectToAction("Index", "Movie");
+        }
+
 
         // GET: Movies/Random
         public ActionResult Random()
